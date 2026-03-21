@@ -1,37 +1,25 @@
 package com.rkortega94.scanner;
 
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
-
+import com.rkortega94.scanner.dtos.MethodDataDTO;
+import com.rkortega94.scanner.dtos.ScannedApplicationDTO;
+import com.rkortega94.scanner.dtos.ScannedControllerDTO;
+import com.rkortega94.scanner.dtos.ScannedServiceDTO;
+import com.rkortega94.scanner.enums.ControllerTypeEnum;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.rkortega94.scanner.dtos.MethodDataDTO;
-import com.rkortega94.scanner.dtos.ScannedApplicationDTO;
-import com.rkortega94.scanner.dtos.ScannedControllerDTO;
-import com.rkortega94.scanner.enums.ControllerTypeEnum;
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import static com.rkortega94.scanner.utils.ControllerUtils.extractAuthorities;
 import static com.rkortega94.scanner.utils.ControllerUtils.extractRoles;
-
-import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -45,21 +33,52 @@ public class ScannerService {
         Set<ScannedControllerDTO> controllers = new HashSet<>();
         controllers.addAll(scanControllerData(includeSwagger));
         controllers.addAll(scanRestControllerData(includeSwagger));
-        scanServices();
-        return buildScannedApplicationDTO(controllers);
+        Set<ScannedServiceDTO> services = scanServiceData();
+        return buildScannedApplicationDTO(controllers, services);
     }
 
     public ScannedApplicationDTO scanControllers() {
         Set<ScannedControllerDTO> controllers = scanControllerData(false);
-        return buildScannedApplicationDTO(controllers);
+        return buildScannedApplicationDTO(controllers, Collections.emptySet());
     }
 
     public ScannedApplicationDTO scanRestControllers(Boolean includeSwagger) {
         Set<ScannedControllerDTO> controllers = scanRestControllerData(includeSwagger);
-        return buildScannedApplicationDTO(controllers);
+        return buildScannedApplicationDTO(controllers, Collections.emptySet());
     }
 
-    public void scanServices() {
+    public ScannedApplicationDTO scanServices() {
+        Set<ScannedServiceDTO> services = scanServiceData();
+        return buildScannedApplicationDTO(Collections.emptySet(), services);
+    }
+
+    private Set<ScannedServiceDTO> scanServiceData() {
+        List<Class<?>> serviceClasses = applicationContext.getBeansWithAnnotation(Service.class).values()
+                .stream()
+                .<Class<?>>map(AopUtils::getTargetClass)
+                .filter(this::isNotScannerService)
+                .toList();
+
+        return serviceClasses.stream()
+                .map(this::buildScannedServiceDTO)
+                .collect(Collectors.toSet());
+    }
+
+    private boolean isNotScannerService(Class<?> clazz) {
+        return !clazz.equals(ScannerService.class);
+    }
+
+    private ScannedServiceDTO buildScannedServiceDTO(Class<?> clazz) {
+        Set<MethodDataDTO> methods = Arrays.stream(clazz.getDeclaredMethods())
+                .filter(method -> java.lang.reflect.Modifier.isPublic(method.getModifiers()))
+                .map(method -> MethodDataDTO.builder()
+                        .name(method.getName())
+                        .roles(extractRoles(method))
+                        .authorities(extractAuthorities(method))
+                        .build())
+                .collect(Collectors.toSet());
+
+        return new ScannedServiceDTO(clazz.getSimpleName(), methods);
     }
 
     private Set<ScannedControllerDTO> scanControllerData(Boolean includeSwagger) {
@@ -67,9 +86,8 @@ public class ScannerService {
                 .stream()
                 .<Class<?>>map(AopUtils::getTargetClass)
                 .filter(clazz -> !clazz.isAnnotationPresent(RestController.class))
-                .filter(clazz -> includeSwagger || !isSwaggerController(clazz))
+                .filter(clazz -> includeSwagger || isNonSwaggerController(clazz))
                 .toList();
-        log.debug("Found " + controllerClasses.size() + " MVC controllers:");
 
         return controllerClasses.stream()
                 .map(clazz -> buildScannedControllerDTO(clazz, ControllerTypeEnum.CONTROLLER))
@@ -80,10 +98,8 @@ public class ScannerService {
         List<Class<?>> controllerClasses = applicationContext.getBeansWithAnnotation(RestController.class).values()
                 .stream()
                 .<Class<?>>map(AopUtils::getTargetClass)
-                .filter(clazz -> includeSwagger || !isSwaggerController(clazz))
+                .filter(clazz -> includeSwagger || isNonSwaggerController(clazz))
                 .toList();
-        log.debug("Found " + controllerClasses.size() + " REST controllers:");
-
         return controllerClasses.stream()
                 .map(clazz -> buildScannedControllerDTO(clazz, ControllerTypeEnum.REST))
                 .collect(Collectors.toSet());
@@ -94,32 +110,28 @@ public class ScannerService {
         Set<String> normalizedControllerPaths = classPaths.stream()
                 .map(path -> joinPaths(path, ""))
                 .collect(Collectors.toSet());
-        log.debug("Found paths: " + classPaths);
-
         Set<MethodDataDTO> methods = extractMethods(clazz, classPaths);
-        log.debug("Found " + methods.size() + " methods:");
-
         return new ScannedControllerDTO(clazz.getSimpleName(), normalizedControllerPaths, methods, controllerType);
     }
 
-    private ScannedApplicationDTO buildScannedApplicationDTO(Set<ScannedControllerDTO> controllers) {
+    private ScannedApplicationDTO buildScannedApplicationDTO(Set<ScannedControllerDTO> controllers,
+                                                             Set<ScannedServiceDTO> services) {
         String serviceName = applicationContext != null
                 ? applicationContext.getEnvironment().getProperty("spring.application.name", UNKNOWN_SERVICE)
                 : UNKNOWN_SERVICE;
-        return new ScannedApplicationDTO(serviceName, controllers);
+        return new ScannedApplicationDTO(serviceName, controllers, services);
     }
 
-    private boolean isSwaggerController(Class<?> clazz) {
-        return clazz.getPackageName().startsWith("springfox") || clazz.getPackageName().startsWith("org.springdoc");
+    private boolean isNonSwaggerController(Class<?> clazz) {
+        return !clazz.getPackageName().startsWith("springfox") && !clazz.getPackageName().startsWith("org.springdoc");
     }
 
     private Set<MethodDataDTO> extractMethods(Class<?> clazz, List<String> classPaths) {
-        Set<MethodDataDTO> methods = Arrays.stream(clazz.getDeclaredMethods()) //
+        return Arrays.stream(clazz.getDeclaredMethods()) //
                 .filter(this::hasMappingAnnotation) //
                 .map(method -> buildMethodDataDTO(method, classPaths)) //
                 .filter(Objects::nonNull) //
                 .collect(Collectors.toSet());
-        return methods;
     }
 
     private MethodDataDTO buildMethodDataDTO(Method method, List<String> classPaths) {

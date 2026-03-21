@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.rkortega94.scanner.dtos.MethodDataDTO;
 import com.rkortega94.scanner.dtos.ScannedApplicationDTO;
+import com.rkortega94.scanner.dtos.ScannedServiceDTO;
 import com.rkortega94.scanner.enums.ControllerTypeEnum;
+import org.springframework.stereotype.Service;
 
 class ScannerServiceTest {
 
@@ -56,6 +58,12 @@ class ScannerServiceTest {
         @GetMapping("/home")
         public String home() {
             return "home";
+        }
+    }
+
+    @Service
+    private static class SampleService {
+        public void doSomething() {
         }
     }
 
@@ -134,6 +142,25 @@ class ScannerServiceTest {
             ScannedApplicationDTO dto = scannerService.scanAll(false);
 
             assertEquals("unknown-service", dto.serviceName());
+        } finally {
+            context.close();
+        }
+    }
+
+    @Test
+    void scanAll_shouldIncludeServices() {
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
+        context.registerBean(SampleService.class);
+        context.refresh();
+
+        try {
+            ScannerService scannerService = new ScannerService(context);
+            ScannedApplicationDTO dto = scannerService.scanAll(false);
+
+            assertEquals(1, dto.services().size());
+            assertTrue(dto.services().stream()
+                    .anyMatch(service -> service.serviceName().equals("SampleService")
+                            && service.methods().stream().anyMatch(m -> m.name().equals("doSomething"))));
         } finally {
             context.close();
         }

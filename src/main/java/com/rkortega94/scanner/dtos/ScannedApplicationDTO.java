@@ -7,6 +7,11 @@ import java.util.Set;
  *
  * @param serviceName application service name
  * @param controllers scanned controllers
+ * @param services    scanned services
  */
-public record ScannedApplicationDTO(String serviceName, Set<ScannedControllerDTO> controllers) {
+public record ScannedApplicationDTO(String serviceName, Set<ScannedControllerDTO> controllers,
+                                   Set<ScannedServiceDTO> services) {
+    public ScannedApplicationDTO(String serviceName, Set<ScannedControllerDTO> controllers) {
+        this(serviceName, controllers, Set.of());
+    }
 }

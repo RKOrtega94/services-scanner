@@ -1,5 +1,6 @@
 package com.rkortega94.scanner;
 
+import com.rkortega94.scanner.enums.BrokerType;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -16,4 +17,33 @@ public class ScannerProperties {
     private Boolean scanRestControllers = false;
     private Boolean scanServices = false;
     private Boolean includeSwagger = false;
+    private BrokerProperties broker = new BrokerProperties();
+
+    @Getter
+    @Setter
+    public static class BrokerProperties {
+        private BrokerType type;
+        private KafkaBrokerProperties kafka = new KafkaBrokerProperties();
+        private RabbitBrokerProperties rabbitmq = new RabbitBrokerProperties();
+        private RedisBrokerProperties redis = new RedisBrokerProperties();
+
+        @Getter
+        @Setter
+        public static class KafkaBrokerProperties {
+            private String topic;
+        }
+
+        @Getter
+        @Setter
+        public static class RabbitBrokerProperties {
+            private String exchange;
+            private String routingKey;
+        }
+
+        @Getter
+        @Setter
+        public static class RedisBrokerProperties {
+            private String channel;
+        }
+    }
 }

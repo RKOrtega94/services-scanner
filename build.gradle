@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 description = 'Scanner module library'
@@ -9,15 +10,51 @@ base {
     archivesName = 'scanner-lib'
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.4"
+    }
+}
+
 dependencies {
+
+    // ── Core Spring (always required) ────────────────────────────────────────
     api 'org.springframework.boot:spring-boot-autoconfigure'
-    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
-    compileOnly "org.projectlombok:lombok:1.18.38"
-    annotationProcessor "org.projectlombok:lombok:1.18.38"
-    api 'jakarta.validation:jakarta.validation-api:3.0.2'
     api 'org.springframework:spring-web'
     api 'org.springframework.security:spring-security-core'
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+    api 'jakarta.validation:jakarta.validation-api:3.0.2'
+    api 'tools.jackson.core:jackson-databind'
+    api 'com.fasterxml.jackson.core:jackson-annotations'
+
+    // ── Testcontainers ────────────────────────────────────────────────────────
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.7')
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.testcontainers:rabbitmq'
+
+    // ── Brokers (optional — consumer app provides whichever they use) ─────────
+    compileOnly 'org.springframework.boot:spring-boot-starter-kafka'
+    compileOnly 'org.springframework.boot:spring-boot-starter-amqp'
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // ── Lombok ────────────────────────────────────────────────────────────────
+    compileOnly 'org.projectlombok:lombok:1.18.38'
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+    // ── Annotation processors ─────────────────────────────────────────────────
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // ── Testing ───────────────────────────────────────────────────────────────
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-kafka'
+    testImplementation 'org.springframework.boot:spring-boot-starter-amqp'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
 }
