@@ -26,8 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RedisBrokerSenderIT {
 
     @Container
-    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7.0"))
-            .withExposedPorts(6379);
+    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7.0")).withExposedPorts(6379);
 
     private static ScannerProperties properties;
     private static RedisConfiguration redisConfiguration;
@@ -42,8 +41,7 @@ class RedisBrokerSenderIT {
 
     @Test
     void shouldSendToRedis() throws InterruptedException {
-        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(
-                new RedisStandaloneConfiguration(redis.getHost(), redis.getMappedPort(6379)));
+        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(new RedisStandaloneConfiguration(redis.getHost(), redis.getMappedPort(6379)));
         connectionFactory.afterPropertiesSet();
 
         RedisTemplate<String, ScannedApplicationDTO> redisTemplate = redisConfiguration.scannerRedisTemplate(connectionFactory);
@@ -54,10 +52,10 @@ class RedisBrokerSenderIT {
 
         // Use a listener to catch the message
         BlockingQueue<ScannedApplicationDTO> receivedMessages = new LinkedBlockingQueue<>();
-        
+
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
-        
+
         MessageListenerAdapter adapter = new MessageListenerAdapter(new Object() {
             @SuppressWarnings("unused")
             public void handleMessage(ScannedApplicationDTO message) {

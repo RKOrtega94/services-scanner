@@ -6,8 +6,6 @@ import com.rkortega94.scanner.dtos.ScannedControllerDTO;
 import com.rkortega94.scanner.dtos.ScannedServiceDTO;
 import com.rkortega94.scanner.enums.ControllerTypeEnum;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
@@ -24,7 +22,6 @@ import static com.rkortega94.scanner.utils.ControllerUtils.extractRoles;
 @Service
 @RequiredArgsConstructor
 public class ScannerService {
-    private static final Log log = LogFactory.getLog(ScannerService.class);
     private static final Set<RequestMethod> ALL_REQUEST_METHODS = EnumSet.allOf(RequestMethod.class);
     private static final String UNKNOWN_SERVICE = "unknown-service";
     private final ApplicationContext applicationContext;

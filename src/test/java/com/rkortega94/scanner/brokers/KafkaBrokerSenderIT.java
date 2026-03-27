@@ -6,7 +6,6 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
@@ -18,7 +17,6 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +28,6 @@ class KafkaBrokerSenderIT {
     static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.4.0"));
 
     private static KafkaConfiguration kafkaConfiguration;
-    private static KafkaBrokerSender kafkaBrokerSender;
     private static ScannerProperties properties;
 
     @BeforeAll
@@ -39,7 +36,7 @@ class KafkaBrokerSenderIT {
         properties.getBroker().getKafka().setTopic("test-topic");
 
         kafkaConfiguration = new KafkaConfiguration(properties);
-        
+
         // Use reflection to set private field bootstrapServers since we're not using Spring Context
         java.lang.reflect.Field field = KafkaConfiguration.class.getDeclaredField("bootstrapServers");
         field.setAccessible(true);
@@ -65,7 +62,7 @@ class KafkaBrokerSenderIT {
         try (KafkaConsumer<String, ScannedApplicationDTO> consumer = new KafkaConsumer<>(consumerProps, new StringDeserializer(), new JacksonJsonDeserializer<>(ScannedApplicationDTO.class, false))) {
             consumer.subscribe(Collections.singletonList("test-topic"));
             ConsumerRecord<String, ScannedApplicationDTO> record = consumer.poll(Duration.ofSeconds(10)).iterator().next();
-            
+
             assertThat(record.value().serviceName()).isEqualTo("test-service");
         }
     }
