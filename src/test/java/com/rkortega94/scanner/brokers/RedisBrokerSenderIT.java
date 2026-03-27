@@ -46,7 +46,7 @@ class RedisBrokerSenderIT {
                 new RedisStandaloneConfiguration(redis.getHost(), redis.getMappedPort(6379)));
         connectionFactory.afterPropertiesSet();
 
-        RedisTemplate<String, ScannedApplicationDTO> redisTemplate = redisConfiguration.redisTemplate(connectionFactory);
+        RedisTemplate<String, ScannedApplicationDTO> redisTemplate = redisConfiguration.scannerRedisTemplate(connectionFactory);
         redisTemplate.afterPropertiesSet();
 
         RedisBrokerSender sender = new RedisBrokerSender(redisTemplate, properties);

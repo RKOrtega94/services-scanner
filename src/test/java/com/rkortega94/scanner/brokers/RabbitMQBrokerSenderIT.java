@@ -37,7 +37,7 @@ class RabbitMQBrokerSenderIT {
     @Test
     void shouldSendToRabbitMQ() {
         CachingConnectionFactory connectionFactory = new CachingConnectionFactory(rabbitmq.getHost(), rabbitmq.getAmqpPort());
-        RabbitTemplate rabbitTemplate = rabbitMQConfiguration.rabbitTemplate(connectionFactory);
+        RabbitTemplate rabbitTemplate = rabbitMQConfiguration.scannerRabbitTemplate(connectionFactory);
         
         RabbitMQBrokerSender sender = new RabbitMQBrokerSender(rabbitTemplate, properties);
         ScannedApplicationDTO data = new ScannedApplicationDTO("test-service", new HashSet<>());

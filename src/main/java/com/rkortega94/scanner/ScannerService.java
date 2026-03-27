@@ -70,7 +70,6 @@ public class ScannerService {
 
     private ScannedServiceDTO buildScannedServiceDTO(Class<?> clazz) {
         Set<MethodDataDTO> methods = Arrays.stream(clazz.getDeclaredMethods())
-                .filter(method -> java.lang.reflect.Modifier.isPublic(method.getModifiers()))
                 .map(method -> MethodDataDTO.builder()
                         .name(method.getName())
                         .roles(extractRoles(method))
@@ -87,6 +86,7 @@ public class ScannerService {
                 .<Class<?>>map(AopUtils::getTargetClass)
                 .filter(clazz -> !clazz.isAnnotationPresent(RestController.class))
                 .filter(clazz -> includeSwagger || isNonSwaggerController(clazz))
+                .filter(this::isNotErrorHandler)
                 .toList();
 
         return controllerClasses.stream()
@@ -99,6 +99,7 @@ public class ScannerService {
                 .stream()
                 .<Class<?>>map(AopUtils::getTargetClass)
                 .filter(clazz -> includeSwagger || isNonSwaggerController(clazz))
+                .filter(this::isNotErrorHandler)
                 .toList();
         return controllerClasses.stream()
                 .map(clazz -> buildScannedControllerDTO(clazz, ControllerTypeEnum.REST))
@@ -124,6 +125,13 @@ public class ScannerService {
 
     private boolean isNonSwaggerController(Class<?> clazz) {
         return !clazz.getPackageName().startsWith("springfox") && !clazz.getPackageName().startsWith("org.springdoc");
+    }
+
+    private boolean isNotErrorHandler(Class<?> clazz) {
+        return !clazz.getSimpleName().contains("ExceptionHandler")
+                && !clazz.getSimpleName().contains("ErrorHandler")
+                && !clazz.getPackageName().startsWith("ec.todoecuador.common.http")
+                && !clazz.getSimpleName().toLowerCase().contains("basicerror");
     }
 
     private Set<MethodDataDTO> extractMethods(Class<?> clazz, List<String> classPaths) {

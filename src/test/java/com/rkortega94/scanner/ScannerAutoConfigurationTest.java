@@ -14,6 +14,11 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import com.rkortega94.scanner.dtos.MethodDataDTO;
+import com.rkortega94.scanner.dtos.ScannedServiceDTO;
+import java.util.Set;
+import org.springframework.stereotype.Service;
+
 class ScannerAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -46,12 +51,44 @@ class ScannerAutoConfigurationTest {
     }
 
     @Test
+    void shouldHaveBrokerSenderInScannerComponent() throws Exception {
+        contextRunner.withPropertyValues("scanner.broker.type=RABBITMQ")
+                .run(context -> {
+                    ScannerComponent scannerComponent = context.getBean(ScannerComponent.class);
+                    java.lang.reflect.Field field = ScannerComponent.class.getDeclaredField("brokerSenderStrategyProvider");
+                    field.setAccessible(true);
+                    org.springframework.beans.factory.ObjectProvider<BrokerSenderStrategy> provider = 
+                            (org.springframework.beans.factory.ObjectProvider<BrokerSenderStrategy>) field.get(scannerComponent);
+                    assertThat(provider.getIfAvailable()).isNotNull();
+                });
+    }
+
+    @Test
     void shouldHaveRedisBrokerSenderWhenTypeIsRedis() {
         contextRunner.withPropertyValues("scanner.broker.type=REDIS")
                 .run(context -> {
                     assertThat(context).hasSingleBean(BrokerSenderStrategy.class);
                     assertThat(context.getBean(BrokerSenderStrategy.class).getType()).isEqualTo(BrokerType.REDIS);
                 });
+    }
+
+    @Test
+    void shouldScanPrivateMethodsInServices() {
+        contextRunner.run(context -> {
+            ScannerService scannerService = context.getBean(ScannerService.class);
+            var scannedApp = scannerService.scanServices();
+            
+            ScannedServiceDTO testService = scannedApp.services().stream()
+                    .filter(s -> s.serviceName().equals("PrivateMethodTestService"))
+                    .findFirst()
+                    .orElseThrow();
+            
+            Set<String> methodNames = testService.methods().stream()
+                    .map(MethodDataDTO::name)
+                    .collect(java.util.stream.Collectors.toSet());
+            
+            assertThat(methodNames).contains("publicMethod", "privateMethod", "protectedMethod", "packagePrivateMethod");
+        });
     }
 
     @Configuration
@@ -66,5 +103,18 @@ class ScannerAutoConfigurationTest {
         public RedisConnectionFactory redisConnectionFactory() {
             return mock(RedisConnectionFactory.class);
         }
+
+        @Bean
+        public PrivateMethodTestService privateMethodTestService() {
+            return new PrivateMethodTestService();
+        }
+    }
+
+    @Service
+    static class PrivateMethodTestService {
+        public void publicMethod() {}
+        private void privateMethod() {}
+        protected void protectedMethod() {}
+        void packagePrivateMethod() {}
     }
 }

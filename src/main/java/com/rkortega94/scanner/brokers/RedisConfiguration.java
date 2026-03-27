@@ -3,6 +3,7 @@ package com.rkortega94.scanner.brokers;
 import com.rkortega94.scanner.ScannerProperties;
 import com.rkortega94.scanner.dtos.ScannedApplicationDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -18,14 +19,14 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @RequiredArgsConstructor
 @ConditionalOnClass(RedisTemplate.class)
 @ConditionalOnProperty(prefix = "scanner.broker", name = "type", havingValue = "REDIS")
-@ConditionalOnBean(RedisConnectionFactory.class)
+@AutoConfigureAfter(name = "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration")
 public class RedisConfiguration {
 
     private final ScannerProperties properties;
 
-    @Bean
+    @Bean(name = "scannerRedisTemplate")
     @ConditionalOnMissingBean(name = "scannerRedisTemplate")
-    public RedisTemplate<String, ScannedApplicationDTO> redisTemplate(RedisConnectionFactory connectionFactory) {
+    public RedisTemplate<String, ScannedApplicationDTO> scannerRedisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, ScannedApplicationDTO> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
         template.setKeySerializer(new StringRedisSerializer());
@@ -35,7 +36,7 @@ public class RedisConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public RedisBrokerSender redisBrokerSender(RedisTemplate<String, ScannedApplicationDTO> redisTemplate) {
-        return new RedisBrokerSender(redisTemplate, properties);
+    public RedisBrokerSender redisBrokerSender(RedisTemplate<String, ScannedApplicationDTO> scannerRedisTemplate) {
+        return new RedisBrokerSender(scannerRedisTemplate, properties);
     }
 }

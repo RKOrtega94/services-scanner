@@ -1,5 +1,7 @@
 package com.rkortega94.scanner.dtos;
 
+import lombok.Builder;
+
 import java.util.Set;
 
 /**
@@ -9,6 +11,7 @@ import java.util.Set;
  * @param controllers scanned controllers
  * @param services    scanned services
  */
+@Builder
 public record ScannedApplicationDTO(String serviceName, Set<ScannedControllerDTO> controllers,
                                    Set<ScannedServiceDTO> services) {
     public ScannedApplicationDTO(String serviceName, Set<ScannedControllerDTO> controllers) {

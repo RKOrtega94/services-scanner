@@ -34,23 +34,21 @@ class KafkaBrokerSenderIT {
     private static ScannerProperties properties;
 
     @BeforeAll
-    static void setUp() {
+    static void setUp() throws Exception {
         properties = new ScannerProperties();
         properties.getBroker().getKafka().setTopic("test-topic");
 
         kafkaConfiguration = new KafkaConfiguration(properties);
-        // Inject bootstrap servers into properties or system properties if needed
-        System.setProperty("spring.kafka.bootstrap-servers", kafka.getBootstrapServers());
         
-        // We need to manually recreate the bean because @Value is used in KafkaConfiguration
-        // and we are not using a full Spring Context here for speed, but we could.
-        // For a true IT, let's use a minimal Spring context if possible, 
-        // but manually constructing for now to verify the logic.
+        // Use reflection to set private field bootstrapServers since we're not using Spring Context
+        java.lang.reflect.Field field = KafkaConfiguration.class.getDeclaredField("bootstrapServers");
+        field.setAccessible(true);
+        field.set(kafkaConfiguration, kafka.getBootstrapServers());
     }
 
     @Test
     void shouldSendToKafka() {
-        KafkaBrokerSender sender = new KafkaBrokerSender(kafkaConfiguration.kafkaTemplate(), properties);
+        KafkaBrokerSender sender = new KafkaBrokerSender(kafkaConfiguration.scannerKafkaTemplate(), properties);
         ScannedApplicationDTO data = new ScannedApplicationDTO("test-service", new HashSet<>());
 
         sender.send(data);

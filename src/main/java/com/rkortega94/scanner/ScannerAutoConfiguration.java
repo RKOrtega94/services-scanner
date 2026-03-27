@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Import;
         ScannerComponent.class,
         KafkaConfiguration.class,
         RabbitMQConfiguration.class,
-        RedisConfiguration.class
+        RedisConfiguration.class,
 })
 public class ScannerAutoConfiguration {
 }
