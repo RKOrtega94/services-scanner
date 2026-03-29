@@ -1,5 +1,9 @@
 package com.rkortega94.scanner;
 
+import com.rkortega94.scanner.brokers.BrokerSenderStrategy;
+import com.rkortega94.scanner.dtos.ScannedApplicationDTO;
+import com.rkortega94.scanner.enums.BrokerType;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -7,12 +11,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import com.rkortega94.scanner.brokers.BrokerSenderStrategy;
-import com.rkortega94.scanner.dtos.ScannedApplicationDTO;
-import com.rkortega94.scanner.enums.BrokerType;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Component
 @EnableScheduling
@@ -33,12 +31,12 @@ public class ScannerComponent {
     }
 
     private void logBrokerConfiguration() {
-        log.debug("Scanner broker configuration - Type: {}, Enabled: {}", 
-            properties.getBroker().getType(), properties.isEnabled());
+        log.debug("Scanner broker configuration - Type: {}, Enabled: {}",
+                properties.getBroker().getType(), properties.isEnabled());
         if (BrokerType.RABBITMQ.equals(properties.getBroker().getType())) {
-            log.debug("RabbitMQ Exchange: {}, Routing Key: {}", 
-                properties.getBroker().getRabbitmq().getExchange(),
-                properties.getBroker().getRabbitmq().getRoutingKey());
+            log.debug("RabbitMQ Exchange: {}, Routing Key: {}",
+                    properties.getBroker().getRabbitmq().getExchange(),
+                    properties.getBroker().getRabbitmq().getRoutingKey());
         }
     }
 
@@ -53,12 +51,12 @@ public class ScannerComponent {
             BrokerType brokerType = properties.getBroker().getType();
             log.warn("No BrokerSenderStrategy bean found for configured broker type: {}. " +
                     "Verify broker configuration and required dependencies.", brokerType);
-            
+
             switch (brokerType) {
                 case RABBITMQ:
                     log.warn("RabbitMQ configuration validation: " +
-                            "Ensure 'spring.rabbitmq.host' is set and 'spring-boot-starter-amqp' dependency is present. " +
-                            "Configured exchange: {}, routing-key: {}",
+                                    "Ensure 'spring.rabbitmq.host' is set and 'spring-boot-starter-amqp' dependency is present. " +
+                                    "Configured exchange: {}, routing-key: {}",
                             properties.getBroker().getRabbitmq().getExchange(),
                             properties.getBroker().getRabbitmq().getRoutingKey());
                     break;
@@ -68,8 +66,8 @@ public class ScannerComponent {
                     break;
                 case REDIS:
                     log.warn("Redis configuration validation: " +
-                            "Ensure 'spring.redis.host' is set and 'spring-boot-starter-data-redis' dependency is present. " +
-                            "Configured channel: {}",
+                                    "Ensure 'spring.redis.host' is set and 'spring-boot-starter-data-redis' dependency is present. " +
+                                    "Configured channel: {}",
                             properties.getBroker().getRedis().getChannel());
                     break;
                 default:
@@ -120,8 +118,8 @@ public class ScannerComponent {
             strategy.send(data);
         } else {
             log.error("Failed to send scanned data: No BrokerSenderStrategy bean available. " +
-                    "Configured broker type: {}. This typically indicates a configuration or dependency issue. " +
-                    "Check application logs for 'No BrokerSenderStrategy bean found' warnings during startup.",
+                            "Configured broker type: {}. This typically indicates a configuration or dependency issue. " +
+                            "Check application logs for 'No BrokerSenderStrategy bean found' warnings during startup.",
                     properties.getBroker().getType());
         }
     }
